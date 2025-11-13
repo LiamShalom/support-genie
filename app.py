@@ -7,33 +7,51 @@ import numpy as np
 from openai import OpenAI
 from dotenv import load_dotenv
 from utils.ticket_tool import create_ticket
+import streamlit as st
 
-kb_path = Path("data/kb_seed/support_kb.json")
+# Page configuration
+st.set_page_config(
+    page_title="SupportGenie AI Assistant",
+    page_icon="🧞",
+    layout="wide"
+)
 
-with kb_path.open("r", encoding="utf-8") as f:
-    kb_data = json.load(f)
+# Custom CSS
+st.markdown("""
+    <style>
+    .main-header {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #1f77b4;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# Print entries for verification
-# print(f"Loaded {len(kb_data)} knowledge base entries.")
-# for entry in kb_data:  
-#     print(entry)
+# Load knowledge base (cached)
+@st.cache_data
+def load_kb():
+    kb_path = Path("data/kb_seed/support_kb.json")
+    with kb_path.open("r", encoding="utf-8") as f:
+        return json.load(f)
 
-# small, very fast, good for short FAQs
-embedder = SentenceTransformer('all-MiniLM-L6-v2')
+kb_data = load_kb()
 
-entries = [entry['content'] for entry in kb_data]
+# Initialize embedder and FAISS index (cached)
+@st.cache_resource
+def initialize_embeddings(kb_data):
+    embedder = SentenceTransformer('all-MiniLM-L6-v2')
+    entries = [entry['content'] for entry in kb_data]
+    embeddings = embedder.encode(entries, convert_to_numpy=True)
+    
+    dimensions = embeddings.shape[1]
+    index = faiss.IndexFlatL2(dimensions)
+    index.add(embeddings)
+    
+    return embedder, index
 
-embeddings = embedder.encode(entries, convert_to_numpy=True)
-
-dimensions = embeddings.shape[1]
-index = faiss.IndexFlatL2(dimensions)
-index.add(embeddings)
-
-# Example query for testing
-# query = "How do I reset my password?"
-# query_emb = embedder.encode([query], convert_to_numpy=True)
-# D, I = index.search(query_emb, k=3)
-# print("Top matches:", [kb_data[i]["id"] for i in I[0]])
+embedder, index = initialize_embeddings(kb_data)
 
 def retrieve(query, k=3):
     query_embed = embedder.encode([query], convert_to_numpy=True)
@@ -52,14 +70,7 @@ def retrieve(query, k=3):
         })
     return results
 
-# Example usage of retrieve function:
-# query = "How do I reset my password if I lost my phone?"
-# results = retrieve(query)
-
-# for r in results:
-#     print(f"[{r['id']}] ({r['distance']:.2f}) - {r['title']}")
-
-# Requires OpenAI API key in environment or .env
+# Initialize OpenAI client
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=openai_api_key)
@@ -72,7 +83,6 @@ def answer_query(query, k=3):
     system_prompt = (
         "You are SupportGenie, an AI support assistant. "
         "- Retrieve answers from the knowledge base and cite document IDs. "
-        "- If the user says 'open ticket' or 'report issue' , call the tool `create_ticket` with title, severity, and summary. "
         "- Be concise, professional, and avoid hallucinations. "
         "- If unsure, say: 'That information isn't available in the knowledge base.' "
     )
@@ -80,7 +90,7 @@ def answer_query(query, k=3):
     user_prompt = f"Knowledge Base:\n{context}\n\nUser: {query}\nAnswer:"
 
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model=os.getenv("OPENAI_MODEL", "gpt-4o"),
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -89,26 +99,80 @@ def answer_query(query, k=3):
     )
 
     answer = response.choices[0].message.content.strip()
-    return answer
+    return answer, results
 
 def handle_user_input(query):
     q_lower = query.lower()
-    if "open ticket" in q_lower or "report issue" in q_lower:
+    if "open" in q_lower and "ticket" in q_lower or "report" in q_lower and "issue" in q_lower:
         if "high" in q_lower:
             severity = "high"
         elif "low" in q_lower:
             severity = "low"
         else:
-            severity = "medium"  # default severity
+            severity = "medium"
             
         title = "User Reported Issue"
         summary = query
         
         ticket = create_ticket(title, severity, summary)
-        return f"Ticket created with ID: {ticket['ticket_id']}, Title: {ticket['title']}, Severity: {ticket['severity']}"
+        return f"**Ticket Created**\n\n**ID:** {ticket['ticket_id']}\n\n**Title:** {ticket['title']}\n\n**Severity:** {ticket['severity']}", None
     
     return answer_query(query)
 
-print(answer_query("How do I reset my password if I lost my phone?"))
+# ============ STREAMLIT UI ============
 
-print(handle_user_input("Open a ticket for this SSO issue with severity high"))
+with st.sidebar:
+    st.markdown("### SupportGenie")
+    st.markdown("**Agentic RAG Prototype**")
+    st.markdown("Ask questions or report issues!")
+    
+    st.markdown("---")
+    if st.button("Clear Chat"):
+        st.session_state.messages = []
+        st.rerun()
+
+
+st.markdown('<div class="main-header">SupportGenie AI Assistant</div>', unsafe_allow_html=True)
+st.markdown("---")
+
+# Check API key
+if not openai_api_key:
+    st.error("OpenAI API key not found. Please set OPENAI_API_KEY in your .env file")
+    st.stop()
+else:
+    st.success(f"System initialized | Knowledge Base entries: {len(kb_data)}")
+
+# Chat input
+if prompt := st.chat_input("Ask a question or report an issue..."):
+
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            try:
+                response, sources = handle_user_input(prompt)
+                st.markdown(response)
+                
+                # Show sources
+                if sources:
+                    with st.expander("Knowledge Base Sources"):
+                        for src in sources:
+                            st.markdown(f"**[{src['id']}]** {src['title']} _(distance: {src['distance']:.3f})_")
+                
+                # Save to history
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response,
+                    "sources": sources
+                })
+            except Exception as e:
+                error_msg = f"Error: {str(e)}"
+                st.error(error_msg)
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": error_msg,
+                    "sources": None
+                })
