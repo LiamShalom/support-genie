@@ -1,0 +1,37 @@
+[
+    {
+        "id": "faq_01",
+        "title": "Password Reset",
+        "content": "Users can reset their password from Settings > Security. If Two-Factor Authentication (2FA) is enabled, a backup code or registered device is required."
+    },
+    {
+        "id": "faq_02",
+        "title": "Email Verification Failed",
+        "content": "If you see 'Verification link expired', request a new link from Profile > Email. Verification links expire in 10 minutes."
+    },
+    {
+        "id": "faq_03",
+        "title": "Billing and Subscription",
+        "content": "Basic plan: $10/user/month. Pro plan: $25/user/month with audit logs and SSO. Enterprise: custom pricing with SLA and dedicated support."
+    },
+    {
+        "id": "faq_04",
+        "title": "SSO Login Issues",
+        "content": "SSO failures often occur if the identity provider metadata is outdated. Refresh SAML metadata under Admin Portal > SSO Settings."
+    },
+    {
+        "id": "faq_05",
+        "title": "Exporting Reports",
+        "content": "Admins can export audit reports in CSV or JSON from the Analytics tab. Exports over 100 MB are automatically compressed."
+    },
+    {
+        "id": "faq_06",
+        "title": "API Rate Limits",
+        "content": "Each API key is limited to 200 requests per minute. For bulk imports, use the /batch endpoint supporting up to 10,000 records per request."
+    },
+    {
+        "id": "faq_07",
+        "title": "System Outage Notification",
+        "content": "Outages and maintenance updates are posted at status.productgenie.io. Users can subscribe via email or RSS feed."
+    }
+]
