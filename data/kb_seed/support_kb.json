@@ -33,5 +33,55 @@
         "id": "faq_07",
         "title": "System Outage Notification",
         "content": "Outages and maintenance updates are posted at status.productgenie.io. Users can subscribe via email or RSS feed."
+    },
+    {
+        "id": "faq_08",
+        "title": "Dark Mode Not Saving",
+        "content": "If dark mode settings revert after reload, clear browser cache and ensure cookies are enabled. Preferences are stored locally per device."
+    },
+    {
+        "id": "faq_09",
+        "title": "Email Templates Not Loading",
+        "content": "If templates fail to load, check Template Library permissions under Admin > Communication. Refresh the page or reselect the workspace."
+    },
+    {
+        "id": "faq_10",
+        "title": "CSV Upload Timeout",
+        "content": "Uploads larger than 50 MB may time out. Split large files or use the asynchronous upload option under Data Import > Advanced."
+    },
+    {
+        "id": "faq_11",
+        "title": "Notification Emails Delayed",
+        "content": "Delays are often caused by spam filters or throttling by mail providers. Verify that notifications@productgenie.io is whitelisted."
+    },
+    {
+        "id": "faq_12",
+        "title": "Dashboard Widgets Missing",
+        "content": "Widgets may disappear if filters are applied. Reset dashboard filters or click Restore Defaults in the top-right corner."
+    },
+    {
+        "id": "faq_13",
+        "title": "Mobile App Login Error",
+        "content": "If mobile users cannot log in, ensure the app is updated to the latest version and check that device time is set to automatic."
+    },
+    {
+        "id": "faq_14",
+        "title": "Webhook Delivery Failed",
+        "content": "Webhook failures often occur due to expired endpoints. Check the receiving server’s SSL certificate and retry the request."
+    },
+    {
+        "id": "faq_15",
+        "title": "2FA Device Lost",
+        "content": "If a 2FA device is lost, sign in using a backup code or contact your admin to reset Two-Factor Authentication under Security Settings."
+    },
+    {
+        "id": "faq_16",
+        "title": "Slow Page Load",
+        "content": "Slow load times are often caused by ad blockers or heavy browser extensions. Try using an incognito window or clearing local cache."
+    },
+    {
+        "id": "faq_17",
+        "title": "Plan Upgrade Failed",
+        "content": "If payment fails during upgrade, verify billing information under Account > Billing. Retry with a valid card or contact support."
     }
 ]

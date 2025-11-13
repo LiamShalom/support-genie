@@ -101,6 +101,30 @@ def answer_query(query, k=3):
     answer = response.choices[0].message.content.strip()
     return answer, results
 
+def generate_ticket_title(query):
+    systemPrompt = ("You are a support ticket assistant. Generate a clear,"
+                    "concise ticket title (max 60 characters) from the user's"
+                    "issue description. Be specific and actionable."
+                    "- Don't include 'severity' in the title."
+                    )
+    
+    userPrompt = f"User: \n{query}\nTitle:"
+    
+    try:
+        response = client.chat.completions.create(
+            model=os.getenv("OPENAI_MODEL", "gpt-4o"),
+            messages=[
+                {"role": "system", "content": systemPrompt},
+                {"role": "user", "content": userPrompt}
+            ],
+            temperature=0.3,
+        )
+        title = response.choices[0].message.content.strip()
+        return title
+    
+    except Exception:
+        return "User Generated Ticket"
+
 def handle_user_input(query):
     q_lower = query.lower()
     if "open" in q_lower and "ticket" in q_lower or "report" in q_lower and "issue" in q_lower:
@@ -108,10 +132,12 @@ def handle_user_input(query):
             severity = "high"
         elif "low" in q_lower:
             severity = "low"
-        else:
+        elif "medium" in q_lower:
             severity = "medium"
+        else:
+            severity = "unspecified"
             
-        title = "User Reported Issue"
+        title = generate_ticket_title(query)
         summary = query
         
         ticket = create_ticket(title, severity, summary)
@@ -120,6 +146,10 @@ def handle_user_input(query):
     return answer_query(query)
 
 # ============ STREAMLIT UI ============
+
+# Initialize session state
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 with st.sidebar:
     st.markdown("### SupportGenie")
@@ -141,6 +171,15 @@ if not openai_api_key:
     st.stop()
 else:
     st.success(f"System initialized | Knowledge Base entries: {len(kb_data)}")
+
+# Display chat history
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+        if "sources" in message and message["sources"]:
+            with st.expander("Knowledge Base Sources"):
+                for src in message["sources"]:
+                    st.markdown(f"**[{src['id']}]** {src['title']} _(distance: {src['distance']:.3f})_")
 
 # Chat input
 if prompt := st.chat_input("Ask a question or report an issue..."):
