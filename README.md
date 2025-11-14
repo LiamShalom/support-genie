@@ -83,6 +83,3 @@ Severity levels: `high`, `medium`, `low`, or `unspecified`
 - Python 3.8+
 - OpenAI API key with GPT-4o access
 
-## License
-
-[Your License Here]
