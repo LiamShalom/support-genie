@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 import faiss
-import numpy as np
 from openai import OpenAI
 from dotenv import load_dotenv
 from utils.ticket_tool import create_ticket
@@ -53,6 +52,7 @@ def initialize_embeddings(kb_data):
 
 embedder, index = initialize_embeddings(kb_data)
 
+# Retrieval function 
 def retrieve(query, k=3):
     query_embed = embedder.encode([query], convert_to_numpy=True)
 
@@ -75,6 +75,7 @@ load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=openai_api_key)
 
+# QA function
 def answer_query(query, k=3):
     results = retrieve(query, k)
 
@@ -101,6 +102,7 @@ def answer_query(query, k=3):
     answer = response.choices[0].message.content.strip()
     return answer, results
 
+# Ticket generation function
 def generate_ticket_title(query):
     systemPrompt = ("You are a support ticket assistant. Generate a clear,"
                     "concise ticket title (max 60 characters) from the user's"
@@ -125,6 +127,7 @@ def generate_ticket_title(query):
     except Exception:
         return "User Generated Ticket"
 
+# Handle user input
 def handle_user_input(query):
     q_lower = query.lower()
     if "open" in q_lower and "ticket" in q_lower or "report" in q_lower and "issue" in q_lower:
