@@ -28,7 +28,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Load knowledge base (cached)
+# Load knowledge base
 @st.cache_data
 def load_kb():
     kb_path = Path("data/kb_seed/support_kb.json")
@@ -37,7 +37,7 @@ def load_kb():
 
 kb_data = load_kb()
 
-# Initialize embedder and FAISS index (cached)
+# Initialize embedder and FAISS index
 @st.cache_resource
 def initialize_embeddings(kb_data):
     embedder = SentenceTransformer('all-MiniLM-L6-v2')
@@ -85,6 +85,8 @@ def answer_query(query, k=3):
         "You are SupportGenie, an AI support assistant. "
         "- Retrieve answers from the knowledge base and cite document IDs. "
         "- Be concise, professional, and avoid hallucinations. "
+        "- When mentioning prices with dollar signs ($), escape them by using \\$ instead "
+        "of $ to prevent LaTeX rendering issues. " # added to prevent LaTeX rendering issues
         "- If unsure, say: 'That information isn't available in the knowledge base.' "
     )
 
@@ -153,6 +155,8 @@ def handle_user_input(query):
 # Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "example_prompt" not in st.session_state:
+    st.session_state.example_prompt = None
 
 with st.sidebar:
     st.markdown("### SupportGenie")
@@ -160,13 +164,30 @@ with st.sidebar:
     st.markdown("Ask questions or report issues!")
     
     st.markdown("---")
-    if st.button("Clear Chat"):
+    st.markdown("### Example Prompts")
+    
+    examples = [
+        "How do I reset my password if I lost my phone?",
+        "SSO not working for new employees",
+        "Open a ticket for this SSO issue with severity high.",
+        "What are your pricing options?",
+        "Report issue: Unable to access my account"
+    ]
+    
+    for example in examples:
+        if st.button(f"{example}", key=f"example_{hash(example)}", use_container_width=True):
+            st.session_state.example_prompt = example
+            st.rerun()
+            
+    st.markdown("---")
+    if st.button("Clear Chat", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
 
 st.markdown('<div class="main-header">SupportGenie AI Assistant</div>', unsafe_allow_html=True)
 st.markdown("---")
+
 
 # Check API key
 if not openai_api_key:
@@ -185,7 +206,14 @@ for message in st.session_state.messages:
                     st.markdown(f"**[{src['id']}]** {src['title']} _(distance: {src['distance']:.3f})_")
 
 # Chat input
-if prompt := st.chat_input("Ask a question or report an issue..."):
+prompt = st.chat_input("Ask a question or report an issue...")
+
+# Handle example prompt clicks
+if st.session_state.example_prompt:
+    prompt = st.session_state.example_prompt
+    st.session_state.example_prompt = None
+
+if prompt:
 
     st.session_state.messages.append({"role": "user", "content": prompt})
     
